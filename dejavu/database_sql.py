@@ -1,9 +1,9 @@
 from __future__ import absolute_import
-from itertools import izip_longest
-import Queue
+from itertools import zip_longest
+import queue
 
-import MySQLdb as mysql
-from MySQLdb.cursors import DictCursor
+from mysql.connector import (connection)
+from mysql.connector import (cursor)
 
 from dejavu.database import Database
 
@@ -214,7 +214,7 @@ class SQLDatabase(Database):
         """
         Return songs that have the fingerprinted flag set TRUE (1).
         """
-        with self.cursor(cursor_type=DictCursor, charset="utf8") as cur:
+        with self.cursor(cursor_type=cursor.MySQLCursorDict, charset="utf8") as cur:
             cur.execute(self.SELECT_SONGS)
             for row in cur:
                 yield row
@@ -223,7 +223,7 @@ class SQLDatabase(Database):
         """
         Returns song by its ID.
         """
-        with self.cursor(cursor_type=DictCursor, charset="utf8") as cur:
+        with self.cursor(cursor_type=cursor.MySQLCursorDict, charset="utf8") as cur:
             cur.execute(self.SELECT_SONG, (sid,))
             return cur.fetchone()
 
@@ -312,7 +312,7 @@ class SQLDatabase(Database):
 def grouper(iterable, n, fillvalue=None):
     args = [iter(iterable)] * n
     return (filter(None, values) for values
-            in izip_longest(fillvalue=fillvalue, *args))
+            in zip_longest(fillvalue=fillvalue, *args))
 
 
 def cursor_factory(**factory_options):
@@ -334,25 +334,25 @@ class Cursor(object):
     ```
     """
 
-    def __init__(self, cursor_type=mysql.cursors.Cursor, **options):
+    def __init__(self, cursor_type=cursor.MySQLCursor, **options):
         super(Cursor, self).__init__()
 
-        self._cache = Queue.Queue(maxsize=5)
+        self._cache = queue.Queue(maxsize=5)
         try:
             conn = self._cache.get_nowait()
-        except Queue.Empty:
-            conn = mysql.connect(**options)
+        except queue.Empty:
+            conn = connection.MySQLConnection
         else:
             # Ping the connection before using it from the cache.
             conn.ping(True)
 
         self.conn = conn
-        self.conn.autocommit(False)
+        #self.conn.autocommit(False)
         self.cursor_type = cursor_type
 
     @classmethod
     def clear_cache(cls):
-        cls._cache = Queue.Queue(maxsize=5)
+        cls._cache = queue.Queue(maxsize=5)
 
     def __enter__(self):
         self.cursor = self.conn.cursor(self.cursor_type)
@@ -360,8 +360,8 @@ class Cursor(object):
 
     def __exit__(self, extype, exvalue, traceback):
         # if we had a MySQL related error we try to rollback the cursor.
-        if extype is mysql.MySQLError:
-            self.cursor.rollback()
+        if extype is not None:
+            self.conn.rollback()
 
         self.cursor.close()
         self.conn.commit()
@@ -369,5 +369,5 @@ class Cursor(object):
         # Put it back on the queue
         try:
             self._cache.put_nowait(self.conn)
-        except Queue.Full:
+        except queue.Full:
             self.conn.close()
