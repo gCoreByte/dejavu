@@ -6,7 +6,7 @@ import pyaudio
 import time
 
 
-class BaseRecognizer(object):
+class BaseRecognizer():
 
     def __init__(self, dejavu):
         self.dejavu = dejavu

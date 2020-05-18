@@ -139,11 +139,11 @@ def generate_hashes(peaks, fan_value=DEFAULT_FAN_VALUE):
     [(e05b341a9b77a51fd26, 32), ... ]
     """
     if PEAK_SORT:
-        peaks.sort(key=itemgetter(1))
+        sorted(peaks, key=itemgetter(1))
 
-    for i in range(len(peaks)):
+    for i, _ in enumerate(peaks):
         for j in range(1, fan_value):
-            if (i + j) < len(peaks):
+            if (i + j) < len(list(peaks)):
 
                 freq1 = peaks[i][IDX_FREQ_I]
                 freq2 = peaks[i + j][IDX_FREQ_I]

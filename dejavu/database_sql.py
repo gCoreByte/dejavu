@@ -154,7 +154,7 @@ class SQLDatabase(Database):
         This also removes all songs that have been added but have no
         fingerprints associated with them.
         """
-        with self.cursor(charset="utf8") as cur:
+        with self.cursor() as cur:
             cur.execute(self.CREATE_SONGS_TABLE)
             cur.execute(self.CREATE_FINGERPRINTS_TABLE)
             cur.execute(self.DELETE_UNFINGERPRINTED)
@@ -214,7 +214,7 @@ class SQLDatabase(Database):
         """
         Return songs that have the fingerprinted flag set TRUE (1).
         """
-        with self.cursor(cursor_type=cursor.MySQLCursorDict, charset="utf8") as cur:
+        with self.cursor(cursor_class=cursor.MySQLCursorDict, charset="utf8") as cur:
             cur.execute(self.SELECT_SONGS)
             for row in cur:
                 yield row
@@ -223,7 +223,7 @@ class SQLDatabase(Database):
         """
         Returns song by its ID.
         """
-        with self.cursor(cursor_type=cursor.MySQLCursorDict, charset="utf8") as cur:
+        with self.cursor(cursor_class=cursor.MySQLCursorDict, charset="utf8") as cur:
             cur.execute(self.SELECT_SONG, (sid,))
             return cur.fetchone()
 
@@ -322,7 +322,7 @@ def cursor_factory(**factory_options):
     return cursor
 
 
-class Cursor(object):
+class Cursor():
     """
     Establishes a connection to the database and returns an open cursor.
 
@@ -334,28 +334,30 @@ class Cursor(object):
     ```
     """
 
-    def __init__(self, cursor_type=cursor.MySQLCursor, **options):
+    def __init__(self, cursor_class=cursor.MySQLCursor, **options):
         super(Cursor, self).__init__()
 
         self._cache = queue.Queue(maxsize=5)
         try:
             conn = self._cache.get_nowait()
         except queue.Empty:
-            conn = connection.MySQLConnection
+            conn = connection.MySQLConnection(**options)
         else:
             # Ping the connection before using it from the cache.
             conn.ping(True)
 
         self.conn = conn
         #self.conn.autocommit(False)
-        self.cursor_type = cursor_type
+        if options is not None and 'cursor_class' in options:
+            cursor_class = options['cursor_class']
+        self.cursor_class = cursor_class
 
     @classmethod
     def clear_cache(cls):
         cls._cache = queue.Queue(maxsize=5)
 
     def __enter__(self):
-        self.cursor = self.conn.cursor(self.cursor_type)
+        self.cursor = self.conn.cursor(cursor_class=self.cursor_class)
         return self.cursor
 
     def __exit__(self, extype, exvalue, traceback):
