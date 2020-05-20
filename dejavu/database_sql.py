@@ -272,8 +272,11 @@ class SQLDatabase(Database):
         for hash, offset in hashes:
             values.append((hash, sid, offset))
 
-        with self.cursor(charset="utf8") as cur:
+        with self.cursor() as cur:
+            cur.execute("INSERT INTO fingerprints VALUES ('hash', '111', '222')")
             for split_values in grouper(values, 1000):
+
+                #print(self.INSERT_FINGERPRINT, split_values)
                 cur.executemany(self.INSERT_FINGERPRINT, split_values)
 
     def return_matches(self, hashes):
@@ -310,9 +313,8 @@ class SQLDatabase(Database):
 
 
 def grouper(iterable, n, fillvalue=None):
-    args = [iter(iterable)] * n
-    return (filter(None, values) for values
-            in zip_longest(fillvalue=fillvalue, *args))
+	args = [iter(iterable)] * n
+	return (list(filter(None, values)) for values in zip_longest(*args, fillvalue=fillvalue))
 
 
 def cursor_factory(**factory_options):

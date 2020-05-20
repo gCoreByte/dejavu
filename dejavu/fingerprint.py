@@ -110,10 +110,10 @@ def get_2D_peaks(arr2D, plot=False, amp_min=DEFAULT_AMP_MIN):
     # filter peaks
     amps = amps.flatten()
     peaks = zip(i, j, amps)
-    peaks_filtered = filter(lambda x: x[2]>amp_min, peaks) # freq, time, amp
+    peaks_filtered = [x for x in peaks if x[2] > amp_min] # freq, time, amp
     # get indices for frequency and time
-    frequency_idx = []
-    time_idx = []
+    frequency_idx = [x[1] for x in peaks_filtered]
+    time_idx = [x[0] for x in peaks_filtered]
     for x in peaks_filtered:
         frequency_idx.append(x[1])
         time_idx.append(x[0])
@@ -139,11 +139,13 @@ def generate_hashes(peaks, fan_value=DEFAULT_FAN_VALUE):
     [(e05b341a9b77a51fd26, 32), ... ]
     """
     if PEAK_SORT:
-        sorted(peaks, key=itemgetter(1))
+        peaks = sorted(peaks, key=itemgetter(1))
 
-    for i, _ in enumerate(peaks):
+    lenPeaks = len(peaks)
+    # print("lenPeaks", lenPeaks)
+    for i in range(lenPeaks):
         for j in range(1, fan_value):
-            if (i + j) < len(list(peaks)):
+            if (i + j) < lenPeaks:
 
                 freq1 = peaks[i][IDX_FREQ_I]
                 freq2 = peaks[i + j][IDX_FREQ_I]
@@ -153,5 +155,5 @@ def generate_hashes(peaks, fan_value=DEFAULT_FAN_VALUE):
 
                 if t_delta >= MIN_HASH_TIME_DELTA and t_delta <= MAX_HASH_TIME_DELTA:
                     h = hashlib.sha1(
-                        "%s|%s|%s" % (str(freq1), str(freq2), str(t_delta)))
+                        "{}|{}|{}".format(str(freq1), str(freq2), str(t_delta)).encode('utf-8'))
                     yield (h.hexdigest()[0:FINGERPRINT_REDUCTION], t1)

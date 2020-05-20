@@ -189,7 +189,8 @@ def _fingerprint_worker(filename, limit=None, song_name=None):
         print("Finished channel %d/%d for %s" % (channeln + 1, channel_amount,
                                                  filename))
         result |= set(hashes)
-
+        print(hashes)
+    print(song_name, result, file_hash)
     return song_name, result, file_hash
 
 
